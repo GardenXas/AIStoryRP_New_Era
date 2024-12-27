@@ -1,0 +1,202 @@
+body {
+    font-family: 'Playfair Display', serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-image: url('https://img.pica-ai.com/image/aigc/alg%26watermark%26p%26e544134beff801e07fb89bbe4896b77b_1024_1024.webp');
+    background-size: cover;
+    background-position: center;
+    color: #fff;
+    overflow-y: scroll;
+}
+
+.container {
+    width: 80%;
+    max-width: 800px;
+    padding: 20px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    transition: transform 0.3s ease;
+}
+
+.container:hover {
+    transform: scale(1.02);
+}
+
+.menu-container {
+    text-align: center;
+    padding: 20px;
+    opacity: 0;
+    animation: fadeIn 0.5s ease forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+h1, h2, h3 {
+    color: #e0c2a0;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+#game-text {
+    margin-bottom: 20px;
+    overflow-y: auto;
+    max-height: 300px;
+    border: 2px solid #e0c2a0;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
+}
+
+.input-area {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+#command-input {
+    flex-grow: 1;
+    padding: 10px;
+    border: 1px solid #e0c2a0;
+    border-radius: 5px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.menu-button {
+    padding: 10px 20px;
+    background-color: #a0785a;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin: 5px;
+    transition: background-color 0.3s ease;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.menu-button:hover {
+    background-color: #805a3e;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+.modal-content {
+    background-color: rgba(0, 0, 0, 0.8);
+    margin: 10% auto;
+    padding: 20px;
+    border: 2px solid #e0c2a0;
+    width: 60%;
+    border-radius: 15px;
+    position: relative;
+    animation: modalFadeIn 0.3s ease forwards;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.close-button {
+    color: #e0c2a0;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: #fff;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+#perk-list li {
+    margin-bottom: 5px;
+    padding: 8px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    list-style-type: none;
+}
+
+#inventory-list li {
+    margin-bottom: 5px;
+    padding: 8px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    list-style-type: none;
+}
+
+#loot-list li {
+    margin-bottom: 5px;
+    padding: 8px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    list-style-type: none;
+}
+
+#api-key-input {
+    padding: 10px;
+    border: 1px solid #e0c2a0;
+    border-radius: 5px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    margin-bottom: 10px;
+    width: 70%;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#character-editor label {
+    display: block;
+    margin-bottom: 5px;
+    color: #e0c2a0;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    text-align: left;
+    margin-left: 10%;
+}
+
+#character-editor input,
+#character-editor textarea {
+    padding: 10px;
+    border: 1px solid #e0c2a0;
+    border-radius: 5px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    margin-bottom: 10px;
+    width: 80%;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
