@@ -44,9 +44,14 @@ const lootModal = document.getElementById('loot-modal');
 const lootList = document.getElementById('loot-list');
 const closeLootButton = document.getElementById('close-loot-button');
 
+const battleLogModal = document.getElementById('battle-log-modal');
+const battleLogText = document.getElementById('battle-log-text');
+
+
 let apiKey = '';
 let apiUrl = '';
 let battleEnemyName = null;
+let loadingIndicator = null;
 
 let character = {
     name: '',
@@ -64,10 +69,43 @@ let character = {
     isFighting: false,
     currentEnemy: null,
     history: [],
-    chatHistory: []
+    chatHistory: [],
+    battleLogs: []
 };
 
 characterEditor.style.display = 'none';
+
+function closeAllModals() {
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        modal.style.display = 'none';
+    });
+}
+
+function showLoadingIndicator() {
+    if (!loadingIndicator) {
+        loadingIndicator = document.createElement('div');
+        loadingIndicator.classList.add('loading-indicator');
+        const circleContainer = document.createElement('div');
+        circleContainer.classList.add('circle-container');
+        circleContainer.innerHTML = `
+            <span class="circle"></span>
+            <span class="circle"></span>
+            <span class="circle"></span>
+            <span class="circle"></span>
+            <span class="circle"></span>
+        `;
+        loadingIndicator.appendChild(circleContainer);
+        gameContainer.appendChild(loadingIndicator);
+    }
+    loadingIndicator.style.display = 'flex';
+}
+
+function hideLoadingIndicator() {
+    if (loadingIndicator) {
+        loadingIndicator.style.display = 'none';
+    }
+}
 
 startGameButton.addEventListener('click', () => {
     apiKey = apiKeyInput.value.trim();
@@ -172,19 +210,25 @@ closeLootButton.addEventListener('click', () => {
 async function startGame() {
     const prompt = `Ты - рассказчик для текстовой ролевой игры. Опиши начало приключения персонажа: имя - ${character.name}, раса - ${character.race}, описание - ${character.description}. Перки персонажа: ${character.perks.map(perk => perk.name).join(', ')}. Начни историю, опиши сцену начала игры в 4-5 предложениях. Используй развернутые предложения и описания. Если у персонажа должны быть начальные предметы, добавь их с помощью команды "add_inventory". Возвращай ответ в JSON формате, используя двойные кавычки для ключей. Пример: {"text": "Вы просыпаетесь в лесу.", "commands": [{"command": "add_inventory", "command_params": {"name": "камень", "count": 1, "description": "небольшой серый камень"}}]}. Если начальных предметов нет, то {"text": "Вы просыпаетесь в лесу.", "commands": []}.`;
     try {
+        showLoadingIndicator();
         const response = await getGeminiResponse(prompt);
         const jsonResponse = parseGeminiResponse(response);
         if (jsonResponse && jsonResponse.text) {
-            gameText.innerHTML = `<p class="gm-response">${jsonResponse.text}</p>`;
+            const gmResponseElement = document.createElement('p');
+            gmResponseElement.classList.add('gm-response');
+            gmResponseElement.innerHTML = jsonResponse.text;
+             gameText.appendChild(gmResponseElement);
             gameText.scrollTop = gameText.scrollHeight;
             character.chatHistory.push({ type: 'gm', text: jsonResponse.text });
-            processGmResponse(jsonResponse);
+            processGmResponse(jsonResponse, gmResponseElement);
         } else {
             gameText.innerHTML += `<p class="gm-response">Рассказчик не вернул корректный текст.</p>`;
         }
     } catch (e) {
         console.error("Ошибка парсинга JSON:", e);
         gameText.innerHTML += `<p class="gm-response">Произошла ошибка при обработке ответа рассказчика.</p>`;
+    } finally {
+        hideLoadingIndicator();
     }
 }
 
@@ -215,29 +259,37 @@ async function processCommand() {
     character.history.push(command);
 
     try {
+         showLoadingIndicator();
         const prompt = `Ты - рассказчик для текстовой ролевой игры. Опиши, что происходит дальше после действия персонажа: ${JSON.stringify(playerInfo)}. Опиши ситуацию в 4-5 предложениях. Используй развернутые предложения и описания. Описывай действия персонажа и неигровых персонажей (NPC), но не выполняй действия за персонажа. Учитывай предыдущие действия персонажа и историю чата. Если персонаж достает откуда-либо или берет с собой какой-либо предмет, добавь этот предмет в инвентарь с помощью команды "add_inventory". Если персонаж подбирает предмет, используй команду "add_inventory" и параметры в JSON формате. Если удаляет, используй команду "remove_inventory" и параметры в JSON формате. Если персонаж инициирует битву (например, говорит, что его атакуют) или если ты решаешь, что на него кто-то напал, используй команду "start_battle" и сгенерируй врага в JSON формате. Если бой закончился, используй команду "end_battle". Возвращай ответ в JSON формате, используя двойные кавычки для ключей. Пример: {"text": "Вы подобрали камень.", "commands": [{"command": "add_inventory", "command_params": {"name": "камень", "count": 1, "description": "небольшой серый камень"}}]}. Если нет команды, то {"text": "Ничего не произошло.", "commands": []}.`;
         const response = await getGeminiResponse(prompt);
         const jsonResponse = parseGeminiResponse(response);
         if (jsonResponse && jsonResponse.text) {
-            gameText.innerHTML += `<p class="gm-response">${jsonResponse.text}</p>`;
+              const gmResponseElement = document.createElement('p');
+              gmResponseElement.classList.add('gm-response');
+              gmResponseElement.innerHTML = jsonResponse.text;
+              gameText.appendChild(gmResponseElement);
             gameText.scrollTop = gameText.scrollHeight;
             character.chatHistory.push({ type: 'gm', text: jsonResponse.text });
-            processGmResponse(jsonResponse);
+            processGmResponse(jsonResponse, gmResponseElement);
             if (jsonResponse && jsonResponse.commands && jsonResponse.commands.some(cmd => cmd.command === 'start_battle')) {
                 const startBattleCommand = jsonResponse.commands.find(cmd => cmd.command === 'start_battle');
                 battleEnemyName = startBattleCommand.command_params?.enemy?.name || null;
-                startBattle();
+                startBattle(gmResponseElement);
             }
+             addRepeatButton(gmResponseElement);
         } else {
             gameText.innerHTML += `<p class="gm-response">Рассказчик не вернул корректный текст.</p>`;
         }
     } catch (e) {
         console.error("Ошибка парсинга JSON:", e);
         gameText.innerHTML += `<p class="gm-response">Произошла ошибка при обработке ответа рассказчика.</p>`;
+    } finally {
+        hideLoadingIndicator();
     }
 
     if (Math.random() < 0.3) {
         try {
+            showLoadingIndicator();
             const enemyPrompt = `Ты - рассказчик. Сгенерируй врага для персонажа. Возвращай ответ в JSON формате. Пример: {"text": "На вас напал гоблин!", "enemy": {"name": "Гоблин", "health": 30, "damage": 5, "experience": 10}}.`;
             const enemyResponse = await getGeminiResponse(enemyPrompt);
             const enemyJsonResponse = parseGeminiResponse(enemyResponse);
@@ -250,11 +302,13 @@ async function processCommand() {
         } catch (e) {
             console.error("Ошибка парсинга JSON:", e);
             gameText.innerHTML += `<p class="gm-response">Произошла ошибка при генерации врага для случайного боя.</p>`;
+        } finally {
+            hideLoadingIndicator();
         }
     }
 }
 
-function processGmResponse(jsonResponse) {
+function processGmResponse(jsonResponse, gmResponseElement) {
     if (jsonResponse && jsonResponse.commands) {
         jsonResponse.commands.forEach(commandData => {
             const command = commandData.command;
@@ -273,7 +327,7 @@ function processGmResponse(jsonResponse) {
                     gameText.innerHTML += `<p class="gm-response">Ошибка: Некорректные параметры команды remove_inventory.</p>`;
                 }
             } else if (command === 'end_battle') {
-                endBattle();
+                endBattle(gmResponseElement);
             }
         });
     }
@@ -299,7 +353,8 @@ function removeInventoryItem(itemName, itemCount, itemDescription) {
     updateInventoryList();
 }
 
-async function startBattle() {
+async function startBattle(gmResponseElement) {
+    closeAllModals(); // Закрываем все модальные окна перед началом боя
     character.isFighting = true;
 
     const playerInfo = {
@@ -318,6 +373,7 @@ async function startBattle() {
     };
     
     let enemy = null;
+    let battleLog = [];
     
     if (battleEnemyName) {
         character.currentEnemy = { name: battleEnemyName };
@@ -330,8 +386,10 @@ async function startBattle() {
         battleModal.style.display = 'block';
         character.chatHistory.push({ type: 'gm', text: `На вас напал ${battleEnemyName}!` });
         battleEnemyName = null;
+         battleLog.push(`Начало битвы с ${character.currentEnemy.name}`);
     } else {
         try {
+            showLoadingIndicator();
             const enemyPrompt = `Ты - рассказчик. Сгенерируй врага для персонажа. Возвращай ответ в JSON формате. Пример: {"text": "На вас напал гоблин!", "enemy": {"name": "Гоблин", "health": 30, "damage": 5, "experience": 10}}.`;
             const enemyResponse = await getGeminiResponse(enemyPrompt);
             const enemyJsonResponse = parseGeminiResponse(enemyResponse);
@@ -346,6 +404,7 @@ async function startBattle() {
                 `;
                 battleModal.style.display = 'block';
                 character.chatHistory.push({ type: 'gm', text: enemyJsonResponse.text });
+                battleLog.push(`Начало битвы с ${character.currentEnemy.name}`);
             } else {
                 gameText.innerHTML += `<p class="gm-response">Рассказчик не вернул корректного врага.</p>`;
                 character.isFighting = false;
@@ -354,7 +413,18 @@ async function startBattle() {
             console.error("Ошибка парсинга JSON:", e);
             gameText.innerHTML += `<p class="gm-response">Произошла ошибка при генерации врага.</p>`;
             character.isFighting = false;
+        } finally {
+            hideLoadingIndicator();
         }
+    }
+    if (gmResponseElement) {
+        const showLogButton = document.createElement('button');
+        showLogButton.textContent = 'Вывести лог боя';
+        showLogButton.classList.add('menu-button');
+        showLogButton.addEventListener('click', () => {
+            showBattleLog(battleLog);
+        });
+        gmResponseElement.appendChild(showLogButton);
     }
 }
 
@@ -390,6 +460,7 @@ async function processBattleCommand(playerInfo) {
     character.chatHistory.push({ type: 'player', text: command });
 
     try {
+        showLoadingIndicator();
         const battlePrompt = `Ты - рассказчик. Опиши, что происходит в бою после действия персонажа: ${JSON.stringify(updatedPlayerInfo)}. Опиши ситуацию в 4-5 предложениях. Используй развернутые предложения и описания. Описывай действия персонажа и врага, но не выполняй действия за персонажа. Рассчитай урон от действия персонажа и врага, и примени его к здоровью персонажей. Если враг побежден, сгенерируй лут в JSON формате, используя команду "add_inventory". Если бой закончен, используй команду "end_battle". Возвращай ответ в JSON формате, используя двойные кавычки для ключей. Пример: {"text": "Вы нанесли удар, гоблин отшатнулся.", "commands": [{"command": "add_inventory", "command_params": {"name": "золото", "count": 10, "description": "немного золота"}}]}.`;
         const battleResponse = await getGeminiResponse(battlePrompt);
         const battleJsonResponse = parseGeminiResponse(battleResponse);
@@ -397,11 +468,13 @@ async function processBattleCommand(playerInfo) {
             battleText.innerHTML += `<p class="gm-response">${battleJsonResponse.text}</p>`;
             processGmResponse(battleJsonResponse);
             character.chatHistory.push({ type: 'gm', text: battleJsonResponse.text });
+            battleLog.push(`Игрок: ${command}`);
+            battleLog.push(`ГМ: ${battleJsonResponse.text}`);
 
             if (character.currentEnemy && character.currentEnemy.health <= 0) {
                 // endBattle(); // Убрано, теперь end_battle вызывается через processGmResponse
             } else if (character.currentHealth <= 0) {
-                endBattle();
+                endBattle(battleLog);
                 character.currentHealth = character.maxHealth;
             }
         } else {
@@ -410,13 +483,37 @@ async function processBattleCommand(playerInfo) {
     } catch (e) {
         console.error("Ошибка парсинга JSON:", e);
         battleText.innerHTML += `<p class="gm-response">Произошла ошибка при обработке ответа рассказчика.</p>`;
+    } finally {
+         hideLoadingIndicator();
     }
 }
 
-function endBattle() {
+function endBattle(battleLog, gmResponseElement) {
     character.isFighting = false;
     character.currentEnemy = null;
     battleModal.style.display = 'none';
+    if (battleLog) {
+        character.battleLogs.push(battleLog);
+    }
+    if (gmResponseElement) {
+        const showLogButton = document.createElement('button');
+        showLogButton.textContent = 'Вывести лог боя';
+        showLogButton.classList.add('menu-button');
+        showLogButton.addEventListener('click', () => {
+            showBattleLog(battleLog);
+        });
+        gmResponseElement.appendChild(showLogButton);
+    }
+}
+
+function showBattleLog(battleLog) {
+     battleLogText.innerHTML = '';
+    battleLog.forEach(log => {
+        const logItem = document.createElement('p');
+        logItem.textContent = log;
+        battleLogText.appendChild(logItem);
+    });
+    battleLogModal.style.display = 'block';
 }
 
 function parseGeminiResponse(response) {
@@ -469,5 +566,34 @@ async function getGeminiResponse(prompt) {
     } catch (error) {
         console.error('Ошибка при запросе к Gemini:', error);
          return `{"text": "Произошла ошибка при обработке вашего запроса.", "commands": []}`;
+    }
+}
+
+function addRepeatButton(gmResponseElement) {
+    const repeatButton = document.createElement('button');
+    repeatButton.textContent = 'Повторить запрос';
+    repeatButton.classList.add('menu-button');
+    repeatButton.addEventListener('click', () => {
+        repeatLastCommand(gmResponseElement);
+    });
+    gmResponseElement.appendChild(repeatButton);
+}
+
+async function repeatLastCommand(gmResponseElement) {
+    if (character.chatHistory.length >= 2) {
+        const lastPlayerMessage = character.chatHistory[character.chatHistory.length - 2];
+        if (lastPlayerMessage.type === 'player') {
+            const lastCommand = lastPlayerMessage.text;
+            character.chatHistory.pop();
+            character.chatHistory.pop();
+            character.history.pop();
+            if(gmResponseElement) {
+                gmResponseElement.remove();
+            }
+            gameText.lastElementChild.remove();
+            gameText.lastElementChild.remove();
+            commandInput.value = lastCommand;
+            await processCommand();
+        }
     }
 }
