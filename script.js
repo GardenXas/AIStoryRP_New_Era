@@ -197,7 +197,11 @@ function updateInventoryList() {
     inventoryList.innerHTML = '';
     character.inventory.forEach((item) => {
         const li = document.createElement('li');
-        li.textContent = item.name;
+        let itemText = item.name;
+        if (item.count > 1) {
+            itemText += ` x${item.count}`;
+        }
+        li.textContent = itemText;
         inventoryList.appendChild(li);
     });
 }
@@ -334,23 +338,37 @@ function processGmResponse(jsonResponse, gmResponseElement) {
 }
 
 function addInventoryItem(itemName, itemCount, itemDescription) {
-    for (let i = 0; i < itemCount; i++) {
-        character.inventory.push({ name: itemName, type: 'item', description: itemDescription });
+    let itemAdded = false;
+    for (const item of character.inventory) {
+        if (item.name === itemName && item.description === itemDescription) {
+            item.count += itemCount;
+            itemAdded = true;
+            break;
+        }
+    }
+    if (!itemAdded) {
+        character.inventory.push({ name: itemName, count: itemCount, type: 'item', description: itemDescription });
     }
     gameText.innerHTML += `<p class="gm-response">Добавлен в инвентарь ${itemCount} x ${itemName}.</p>`;
     updateInventoryList();
 }
 
 function removeInventoryItem(itemName, itemCount, itemDescription) {
-    let removedCount = 0;
     for (let i = character.inventory.length - 1; i >= 0; i--) {
-        if (character.inventory[i].name === itemName && removedCount < itemCount) {
-            character.inventory.splice(i, 1);
-            removedCount++;
+        const item = character.inventory[i];
+        if (item.name === itemName && item.description === itemDescription) {
+            if (item.count > itemCount) {
+                item.count -= itemCount;
+                gameText.innerHTML += `<p class="gm-response">Удален из инвентаря ${itemCount} x ${itemName}.</p>`;
+            } else {
+                character.inventory.splice(i, 1);
+                gameText.innerHTML += `<p class="gm-response">Удален из инвентаря ${item.count} x ${itemName}.</p>`;
+            }
+            updateInventoryList();
+            return;
         }
     }
-    gameText.innerHTML += `<p class="gm-response">Удален из инвентаря ${removedCount} x ${itemName}.</p>`;
-    updateInventoryList();
+    gameText.innerHTML += `<p class="gm-response">Предмет ${itemName} не найден в инвентаре.</p>`;
 }
 
 async function startBattle(gmResponseElement) {
