@@ -6,11 +6,12 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    background-image: url('https://github.com/GardenXas/AIStoryRP_New_Era/blob/main/Pyctore/Zastavka.jpg?raw=true');
+    background-image: url('https://github.com/GardenXas/AIStoryRP_New_Era/blob/main/22312.jpg?raw=true');
     background-size: cover;
     background-position: center;
     color: #fff;
-    overflow-y: scroll;
+    overflow-y: scroll; /* Restored scroll */
+    background-attachment: fixed;
 }
 
 .container {
@@ -155,6 +156,11 @@ h1, h2, h3 {
     background-color: rgba(255, 255, 255, 0.1);
     border-radius: 5px;
     list-style-type: none;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
 }
 
 #loot-list li {
@@ -163,6 +169,16 @@ h1, h2, h3 {
     background-color: rgba(255, 255, 255, 0.1);
     border-radius: 5px;
     list-style-type: none;
+}
+
+#map-list li {
+    margin-bottom: 5px;
+    padding: 8px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    list-style-type: none;
+    cursor: pointer;
+    position: relative;
 }
 
 #api-key-input {
@@ -255,4 +271,65 @@ h1, h2, h3 {
         opacity: 0.2;
         transform: scale(0.8);
     }
+}
+
+/* Tooltip Styles */
+#item-tooltip {
+    display: none;
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.9);
+    border: 1px solid #e0c2a0;
+    padding: 10px;
+    border-radius: 5px;
+    z-index: 1001;
+    max-width: 300px;
+    color: #fff;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+#item-tooltip img {
+    max-width: 100%;
+    display: block;
+    margin-bottom: 10px;
+    border-radius: 5px;
+}
+
+#character-tooltip {
+    display: none;
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.9);
+    border: 1px solid #e0c2a0;
+    padding: 10px;
+    border-radius: 5px;
+    z-index: 1001;
+    max-width: 300px;
+    color: #fff;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+#character-tooltip img {
+    max-width: 100%;
+    display: block;
+    margin-bottom: 10px;
+    border-radius: 5px;
+}
+
+#location-tooltip {
+    display: none;
+    position: absolute; /* Изменено на absolute */
+    background-color: rgba(0, 0, 0, 0.9);
+    border: 1px solid #e0c2a0;
+    padding: 10px;
+    border-radius: 5px;
+    z-index: 1001;
+    max-width: 300px;
+    color: #fff;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+#location-tooltip img {
+    max-width: 100%;
+    display: block;
+    margin-bottom: 10px;
+    border-radius: 5px;
 }
