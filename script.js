@@ -2,6 +2,7 @@ const mainMenu = document.getElementById('main-menu');
 const characterEditor = document.getElementById('character-editor');
 const gameContainer = document.getElementById('game-container');
 const startGameButton = document.getElementById('start-game-button');
+const loadGameButton = document.getElementById('load-game-button');
 const startAdventureButton = document.getElementById('start-adventure-button');
 const gameText = document.getElementById('game-text');
 const commandInput = document.getElementById('command-input');
@@ -10,6 +11,7 @@ const characterInfoButton = document.getElementById('character-info-button');
 const inventoryButton = document.getElementById('inventory-button');
 const mapButton = document.getElementById('map-button');
 const charactersButton = document.getElementById('characters-button');
+const saveGameButton = document.getElementById('save-game-button');
 const apiKeyInput = document.getElementById('api-key-input');
 
 const characterNameInput = document.getElementById('character-name');
@@ -137,6 +139,11 @@ startGameButton.addEventListener('click', async () => {
     apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=' + apiKey;
     mainMenu.style.display = 'none';
     characterEditor.style.display = 'block';
+});
+
+
+loadGameButton.addEventListener('click', () => {
+    loadGame();
 });
 
 startAdventureButton.addEventListener('click', () => {
@@ -290,6 +297,59 @@ closeLootButton.addEventListener('click', () => {
     lootModal.style.display = 'none';
 });
 
+saveGameButton.addEventListener('click', () => {
+    saveGame();
+});
+
+function saveGame() {
+    const gameState = {
+        character: character,        apiKey: apiKey,
+        apiUrl: apiUrl
+    };
+    try {
+         localStorage.setItem('rpg_save_state', JSON.stringify(gameState));
+         alert('Игра сохранена!');
+    } catch (e) {
+        console.error("Error saving game:", e);
+        alert('Не удалось сохранить игру из-за ошибки.');
+    }
+}
+
+function loadGame() {
+    const savedGame = localStorage.getItem('rpg_save_state');
+    if (savedGame) {
+        try {
+            const gameState = JSON.parse(savedGame);
+            character = gameState.character;
+            apiKey = gameState.apiKey;
+            apiUrl = gameState.apiUrl;
+            apiKeyInput.value = apiKey;
+            mainMenu.style.display = 'none';
+            characterEditor.style.display = 'none';
+            gameContainer.style.display = 'block';
+            gameText.innerHTML = '';
+            character.chatHistory.forEach(message => {
+                const messageElement = document.createElement('p');
+                messageElement.classList.add(message.type === 'player' ? 'player-command' : 'gm-response');
+                messageElement.innerHTML = message.text;
+                gameText.appendChild(messageElement);
+            });
+            gameText.scrollTop = gameText.scrollHeight;
+            updatePerkList();
+            updateInventoryList();
+            updateMapList();
+            updateCharactersList();
+           alert('Игра загружена!');
+        }  catch (e) {
+            console.error("Error loading game:", e);
+            alert('Не удалось загрузить игру из-за ошибки.');
+        }
+    } else {
+        alert('Нет сохраненных игр.');
+    }
+}
+
+
 async function startGame() {
     try {
         showLoadingIndicator();
@@ -324,7 +384,7 @@ async function processCommand() {
     commandInput.value = '';
 
     const playerInfo = {
-                command: command,
+        command: command,
         inventory: character.inventory,
         stats: {
             level: character.level,
@@ -680,7 +740,7 @@ function showBattleLog(battleLog) {
 }
 
 function parseGeminiResponse(response) {
-    let text = response || '';
+     let text = response || '';
     let commands = [];
 
     try {
@@ -712,41 +772,40 @@ function parseGeminiResponse(response) {
         text = text.replace(/,\s*([}\]])/g, '$1');
 
         // 7. Attempt to parse the JSON
-        let parsed;
+         let parsed;
         try {
             parsed = JSON.parse(text);
         } catch (e) {
-            console.error("Failed to parse JSON:", e, response);
-            // Try to fix common issues
+             console.error("Failed to parse JSON:", e, response);
             try {
                 // Remove extra commas
                 text = text.replace(/,\s*([}\]])/g, '$1');
                 // Remove extra newlines
                 text = text.replace(/\n/g, '');
-                // Remove trailing commas again
+                 // Remove trailing commas again
                 text = text.replace(/,\s*([}\]])/g, '$1');
                 // Remove extra colons
                 text = text.replace(/:\s*([}\]])/g, '$1');
                 parsed = JSON.parse(text);
             } catch (e2) {
-                console.error("Failed to parse JSON even after fix:", e2, response);
+                   console.error("Failed to parse JSON even after fix:", e2, response);
                 return { text: response, commands: [] };
-            }
+           }
         }
 
-        if (Array.isArray(parsed)) {
+         if (Array.isArray(parsed)) {
             commands = parsed;
         } else if (parsed && parsed.commands) {
-            commands = parsed.commands;
+             commands = parsed.commands;
             text = parsed.text || '';
-        } else if (parsed && parsed.text) {
-            text = parsed.text;
-        }
-        return { text: text, commands: commands };
+         } else if (parsed && parsed.text) {
+             text = parsed.text;
+         }
+         return { text: text, commands: commands };
 
     } catch (e) {
         console.error("Error parsing Gemini response:", e, response);
-        return { text: response, commands: [] };
+       return { text: response, commands: [] };
     }
 }
 
@@ -761,7 +820,7 @@ async function getGeminiResponse(prompt) {
                 contents: [{
                     parts: [{ text: prompt }],
                 }],
-                safetySettings: [
+                 safetySettings: [
                     {
                         category: "HARM_CATEGORY_HARASSMENT",
                         threshold: "BLOCK_NONE"
@@ -792,9 +851,9 @@ async function getGeminiResponse(prompt) {
         }
 
         const data = await response.json();
-        console.log("Gemini API Response:", data);
+         console.log("Gemini API Response:", data);
         console.log("Gemini API Prompt:", prompt);
-        if (data && data.promptFeedback && data.promptFeedback.blockReason) {
+           if (data && data.promptFeedback && data.promptFeedback.blockReason) {
             console.error("Gemini API blocked the response:", data);
             return `{"text": "Произошла ошибка при обработке вашего запроса.", "commands": []}`;
         }
@@ -810,7 +869,7 @@ async function getGeminiResponse(prompt) {
             return data.candidates[0].content.parts[0].text;
         } else {
             console.error("Некорректный ответ от Gemini API:", data);
-            return `{"text": "Произошла ошибка при обработке вашего запроса.", "commands": []}`;
+             return `{"text": "Произошла ошибка при обработке вашего запроса.", "commands": []}`;
         }
 
     } catch (error) {
@@ -841,12 +900,10 @@ async function repeatLastCommand(gmResponseElement) {
         if (lastPlayerMessage.type === 'player') {
             const lastCommand = lastPlayerMessage.text;
             character.chatHistory.pop();
-            character.chatHistory.pop();
             character.history.pop();
             if (gmResponseElement) {
                 gmResponseElement.remove();
             }
-            gameText.lastElementChild.remove();
             gameText.lastElementChild.remove();
             commandInput.value = lastCommand;
             await processCommand();
@@ -876,3 +933,12 @@ document.addEventListener('DOMContentLoaded', () => {
     locationTooltipImage = document.getElementById('location-tooltip-image');
     locationTooltipText = document.getElementById('location-tooltip-text');
 });
+// Function to handle window unload (e.g., browser close or refresh)
+function handleUnload() {
+    // Save game state if the game is active
+    if (gameContainer.style.display === 'block') {
+         saveGame();
+    }
+    }
+// Add unload listener
+window.addEventListener('beforeunload', handleUnload);
