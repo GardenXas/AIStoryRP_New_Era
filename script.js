@@ -178,14 +178,7 @@ function updateScenarioList() {
     scenarioList.innerHTML = '';
     // Добавляем стандартный сценарий
     const defaultScenario = {
-        id: 'default', // Явно присваиваем ID 'default'
-        name: 'Стандартный сценарий',
-        worldDescription: 'Стандартный фэнтезийный мир.',
-        worldHistory: 'Давным-давно...',
-        scenarioDescription: 'Начало вашего приключения.',
-        scenarioHistory: 'Вы просыпаетесь...',
-        scenarioSettings: 'Нет особых настроек.'
-    };
+
     addScenarioToList(defaultScenario);
 
     for (const scenarioId in scenarios) {
