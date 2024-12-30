@@ -178,7 +178,7 @@ function updateScenarioList() {
     scenarioList.innerHTML = '';
     // Добавляем стандартный сценарий
     const defaultScenario = {
-        id: 'default',
+        id: 'default', // Явно присваиваем ID 'default'
         name: 'Стандартный сценарий',
         worldDescription: 'Стандартный фэнтезийный мир.',
         worldHistory: 'Давным-давно...',
@@ -196,6 +196,7 @@ function updateScenarioList() {
 function addScenarioToList(scenario) {
     const scenarioDiv = document.createElement('div');
     scenarioDiv.classList.add('scenario-item');
+    scenarioDiv.setAttribute('data-scenario-id', scenario.id); // Добавляем data-scenario-id
     
     // Создаем элемент для названия сценария
     const scenarioName = document.createElement('span');
@@ -214,7 +215,7 @@ function selectScenario(scenarioId) {
     const scenarioItems = document.querySelectorAll('.scenario-item');
     scenarioItems.forEach(item => {
         item.classList.remove('selected');
-        if (item.querySelector('.scenario-name').textContent === (scenarios[scenarioId]?.name || 'Без названия') || scenarioId === 'default') {
+        if (item.getAttribute('data-scenario-id') === scenarioId) {
             item.classList.add('selected');
         }
     });
