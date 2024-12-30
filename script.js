@@ -883,7 +883,7 @@ function showBattleLog(battleLog) {
 }
 
 function parseGeminiResponse(response) {
-     let text = response || '';
+    let text = response || '';
     let commands = [];
 
     try {
