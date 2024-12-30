@@ -1,4 +1,5 @@
 const mainMenu = document.getElementById('main-menu');
+const scenarioMenu = document.getElementById('scenario-menu');
 const characterEditor = document.getElementById('character-editor');
 const gameContainer = document.getElementById('game-container');
 const startGameButton = document.getElementById('start-game-button');
@@ -13,6 +14,7 @@ const mapButton = document.getElementById('map-button');
 const charactersButton = document.getElementById('characters-button');
 const saveGameButton = document.getElementById('save-game-button');
 const apiKeyInput = document.getElementById('api-key-input');
+const continueButton = document.getElementById('continue-button');
 
 const characterNameInput = document.getElementById('character-name');
 const characterRaceInput = document.getElementById('character-race');
@@ -67,12 +69,24 @@ const itemTooltip = document.getElementById('item-tooltip');
 const tooltipImage = document.getElementById('tooltip-image');
 const tooltipText = document.getElementById('tooltip-text');
 
+const createScenarioButton = document.getElementById('create-scenario-button');
+const createScenarioModal = document.getElementById('create-scenario-modal');
+const saveScenarioButton = document.getElementById('save-scenario-button');
+const scenarioList = document.getElementById('scenario-list');
+const worldDescriptionInput = document.getElementById('world-description');
+const worldHistoryInput = document.getElementById('world-history');
+const scenarioDescriptionInput = document.getElementById('scenario-description');
+const scenarioHistoryInput = document.getElementById('scenario-history');
+const scenarioSettingsInput = document.getElementById('scenario-settings');
+const scenarioNameInput = document.getElementById('scenario-name');
+
 let apiKey = '';
 let apiUrl = '';
 let battleEnemyName = null;
 let loadingIndicator = null;
 let model = null;
 let chatSession = null;
+let selectedScenarioId = null;
 
 let character = {
     name: '',
@@ -96,7 +110,12 @@ let character = {
     knownCharacters: []
 };
 
+let scenarios = {};
+
+mainMenu.style.display = 'block';
+scenarioMenu.style.display = 'none';
 characterEditor.style.display = 'none';
+gameContainer.style.display = 'none';
 
 function closeAllModals() {
     const modals = document.querySelectorAll('.modal');
@@ -130,6 +149,121 @@ function hideLoadingIndicator() {
     }
 }
 
+// Загрузка сценариев при старте
+loadScenarios();
+
+function loadScenarios() {
+    const savedScenarios = localStorage.getItem('rpg_scenarios');
+    if (savedScenarios) {
+        try {
+            scenarios = JSON.parse(savedScenarios);
+        } catch (e) {
+            console.error("Error loading scenarios:", e);
+            alert('Не удалось загрузить сценарии из-за ошибки.');
+        }
+    }
+    updateScenarioList();
+}
+
+function saveScenarios() {
+    try {
+        localStorage.setItem('rpg_scenarios', JSON.stringify(scenarios));
+    } catch (e) {
+        console.error("Error saving scenarios:", e);
+        alert('Не удалось сохранить сценарии из-за ошибки.');
+    }
+}
+
+function updateScenarioList() {
+    scenarioList.innerHTML = '';
+    // Добавляем стандартный сценарий
+    const defaultScenario = {
+        id: 'default',
+        name: 'Стандартный сценарий',
+        worldDescription: 'Стандартный фэнтезийный мир.',
+        worldHistory: 'Давным-давно...',
+        scenarioDescription: 'Начало вашего приключения.',
+        scenarioHistory: 'Вы просыпаетесь...',
+        scenarioSettings: 'Нет особых настроек.'
+    };
+    addScenarioToList(defaultScenario);
+
+    for (const scenarioId in scenarios) {
+        addScenarioToList(scenarios[scenarioId]);
+    }
+}
+
+function addScenarioToList(scenario) {
+    const scenarioDiv = document.createElement('div');
+    scenarioDiv.classList.add('scenario-item');
+    
+    // Создаем элемент для названия сценария
+    const scenarioName = document.createElement('span');
+    scenarioName.classList.add('scenario-name');
+    scenarioName.textContent = scenario.name || 'Без названия';
+    scenarioDiv.appendChild(scenarioName);
+
+    scenarioDiv.addEventListener('click', () => {
+        selectScenario(scenario.id);
+    });
+    scenarioList.appendChild(scenarioDiv);
+}
+
+function selectScenario(scenarioId) {
+    selectedScenarioId = scenarioId;
+    const scenarioItems = document.querySelectorAll('.scenario-item');
+    scenarioItems.forEach(item => {
+        item.classList.remove('selected');
+        if (item.querySelector('.scenario-name').textContent === (scenarios[scenarioId]?.name || 'Без названия') || scenarioId === 'default') {
+            item.classList.add('selected');
+        }
+    });
+    continueButton.style.display = 'block';
+}
+
+continueButton.addEventListener('click', () => {
+    scenarioMenu.style.display = 'none';
+    characterEditor.style.display = 'block';
+});
+
+createScenarioButton.addEventListener('click', () => {
+    createScenarioModal.style.display = 'block';
+});
+
+saveScenarioButton.addEventListener('click', () => {
+    const scenarioName = scenarioNameInput.value;
+    const worldDescription = worldDescriptionInput.value;
+    const worldHistory = worldHistoryInput.value;
+    const scenarioDescription = scenarioDescriptionInput.value;
+    const scenarioHistory = scenarioHistoryInput.value;
+    const scenarioSettings = scenarioSettingsInput.value;
+
+    if (scenarioName && worldDescription && worldHistory && scenarioDescription && scenarioHistory) {
+        const scenarioId = Date.now().toString();
+        scenarios[scenarioId] = {
+            id: scenarioId,
+            name: scenarioName,
+            worldDescription: worldDescription,
+            worldHistory: worldHistory,
+            scenarioDescription: scenarioDescription,
+            scenarioHistory: scenarioHistory,
+            scenarioSettings: scenarioSettings
+        };
+        saveScenarios();
+        updateScenarioList();
+        createScenarioModal.style.display = 'none';
+        scenarioNameInput.value = '';
+        worldDescriptionInput.value = '';
+        worldHistoryInput.value = '';
+        scenarioDescriptionInput.value = '';
+        scenarioHistoryInput.value = '';
+        scenarioSettingsInput.value = '';
+        alert('Сценарий сохранен!');
+    } else {
+        alert('Пожалуйста, заполните все поля сценария.');
+    }
+});
+
 startGameButton.addEventListener('click', async () => {
     apiKey = apiKeyInput.value.trim();
     if (!apiKey) {
@@ -138,7 +272,7 @@ startGameButton.addEventListener('click', async () => {
     }
     apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=' + apiKey;
     mainMenu.style.display = 'none';
-    characterEditor.style.display = 'block';
+    scenarioMenu.style.display = 'block';
 });
 
 
@@ -303,8 +437,10 @@ saveGameButton.addEventListener('click', () => {
 
 function saveGame() {
     const gameState = {
-        character: character,        apiKey: apiKey,
-        apiUrl: apiUrl
+        character: character,
+        apiKey: apiKey,
+        apiUrl: apiUrl,
+        selectedScenarioId: selectedScenarioId
     };
     try {
          localStorage.setItem('rpg_save_state', JSON.stringify(gameState));
@@ -323,8 +459,10 @@ function loadGame() {
             character = gameState.character;
             apiKey = gameState.apiKey;
             apiUrl = gameState.apiUrl;
+            selectedScenarioId = gameState.selectedScenarioId;
             apiKeyInput.value = apiKey;
             mainMenu.style.display = 'none';
+            scenarioMenu.style.display = 'none';
             characterEditor.style.display = 'none';
             gameContainer.style.display = 'block';
             gameText.innerHTML = '';
@@ -353,7 +491,25 @@ function loadGame() {
 async function startGame() {
     try {
         showLoadingIndicator();
-        const prompt = `Ты - рассказчик для текстовой ролевой игры. Персонаж: имя - ${character.name}, раса - ${character.race}, описание - ${character.description}. Перки: ${character.perks.map(perk => perk.name).join(', ')}. Начни историю, опиши сцену начала игры в 4-5 предложениях. Используй развернутые предложения и описания. Если персонаж должен иметь начальные предметы, добавь их с помощью команды "add_inventory". Обязательно добавь начальную локацию на карту командой "add_location". Возвращай ответ в JSON формате, используя двойные кавычки для ключей. Пример: {"text": "Вы просыпаетесь в лесу.", "commands": [{"command": "add_inventory", "command_params": {"name": "камень", "count": 1, "description": "небольшой серый камень", "image_prompt": "a small gray stone"}}, {"command": "add_location", "command_params": {"name": "Темный лес", "description": "Темный лес, полный тайн и опасностей.", "image_prompt": "a dark forest with twisted trees and shadows"}} ]}. Если начальных предметов нет, то {"text": "Вы просыпаетесь в лесу.", "commands": [{"command": "add_location", "command_params": {"name": "Темный лес", "description": "Темный лес, полный тайн и опасностей.", "image_prompt": "a dark forest with twisted trees and shadows"}} ]}.`;
+        let scenario = scenarios[selectedScenarioId] || {
+            name: 'Стандартный сценарий',
+            worldDescription: 'Стандартный фэнтезийный мир.',
+            worldHistory: 'Давным-давно...',
+            scenarioDescription: 'Начало вашего приключения.',
+            scenarioHistory: 'Вы просыпаетесь...',
+            scenarioSettings: 'Нет особых настроек.'
+        };
+        if (selectedScenarioId === 'default') {
+            scenario = {
+                name: 'Стандартный сценарий',
+                worldDescription: 'Стандартный фэнтезийный мир.',
+                worldHistory: 'Давным-давно...',
+                scenarioDescription: 'Начало вашего приключения.',
+                scenarioHistory: 'Вы просыпаетесь...',
+                scenarioSettings: 'Нет особых настроек.'
+            };
+        }
+        const prompt = `Ты - рассказчик для текстовой ролевой игры. Мир: ${scenario.worldDescription}. История мира: ${scenario.worldHistory}. Сценарий: ${scenario.scenarioDescription}. История сценария: ${scenario.scenarioHistory}. Настройки сценария: ${scenario.scenarioSettings}. Персонаж: имя - ${character.name}, раса - ${character.race}, описание - ${character.description}. Перки: ${character.perks.map(perk => perk.name).join(', ')}. Начни историю, опиши сцену начала игры в 4-5 предложениях. Используй развернутые предложения и описания. Если персонаж должен иметь начальные предметы, добавь их с помощью команды "add_inventory". Обязательно добавь начальную локацию на карту командой "add_location". Возвращай ответ в JSON формате, используя двойные кавычки для ключей. Пример: {"text": "Вы просыпаетесь в лесу.", "commands": [{"command": "add_inventory", "command_params": {"name": "камень", "count": 1, "description": "небольшой серый камень", "image_prompt": "a small gray stone"}}, {"command": "add_location", "command_params": {"name": "Темный лес", "description": "Темный лес, полный тайн и опасностей.", "image_prompt": "a dark forest with twisted trees and shadows"}} ]}. Если начальных предметов нет, то {"text": "Вы просыпаетесь в лесу.", "commands": [{"command": "add_location", "command_params": {"name": "Темный лес", "description": "Темный лес, полный тайн и опасностей.", "image_prompt": "a dark forest with twisted trees and shadows"}} ]}.`;
         const response = await getGeminiResponse(prompt);
         const jsonResponse = parseGeminiResponse(response);
         if (jsonResponse && jsonResponse.text) {
@@ -404,7 +560,25 @@ async function processCommand() {
 
     try {
         showLoadingIndicator();
-        const prompt = `Ты - рассказчик для текстовой ролевой игры. Опиши, что происходит дальше после действия персонажа: ${JSON.stringify(playerInfo)}. Опиши ситуацию в 4-5 предложениях. Используй развернутые предложения и описания. Описывай действия персонажа и неигровых персонажей (NPC), но не выполняй действия за персонажа. Учитывай предыдущие действия персонажа и историю чата. Если персонаж достает откуда-либо или берет с собой какой-либо предмет, добавь этот предмет в инвентарь командой "add_inventory". Если персонаж подбирает предмет, используй команду "add_inventory" и параметры в JSON формате. Обязательно дай предмету подробное описание, чтобы можно было сгенерировать изображение для него. Добавь image_prompt для генерации изображения. Если удаляет, используй команду "remove_inventory" и параметры в JSON формате. Если персонаж находит новую локацию, добавь ее на карту командой "add_location". Обязательно дай локации подробное описание, чтобы можно было сгенерировать изображение для нее. Добавь image_prompt для генерации изображения. **Если персонаж встречает нового персонажа, который называет свое имя (не общее название типа "пацан", "девушка", а имя на подобие "Руслан", "Иракан", "Илиан" и т.д.), добавь его в список знакомых командой "add_character". Обязательно дай персонажу имя, описание внешности, отношение к персонажу игрока и image_prompt для генерации изображения.** **Если персонаж раскрывает свое настоящее имя, то используй команду "edit_character" и параметры в JSON формате, используя старое имя персонажа в параметре "oldName".** Если персонаж инициирует битву, используй команду "start_battle" и сгенерируй врага в JSON формате. Если бой закончился, используй команду "end_battle". **В конце ответа, добавь информацию для ГМ о доступных командах и их параметрах. Например: "Доступные команды: add_inventory {\"name\": \"имя\", \"count\": количество, \"description\": \"описание\", \"image_prompt\": \"image prompt\"}, add_location {\"name\": \"имя\", \"description\": \"описание\", \"image_prompt\": \"image prompt\"}, add_character {\"name\": \"имя\", \"description\": \"описание\", \"relation\": \"отношение\", \"image_prompt\": \"image prompt\"}, edit_character {\"oldName\": \"старое имя\", \"name\": \"новое имя\", \"description\": \"описание\", \"relation\": \"отношение\", \"image_prompt\": \"image prompt\"}. Если требуется добавить персонажа в список персонажей, то используй команду add_character. Если нужно отредактировать информацию о персонаже, то используй команду edit_character."** Возвращай ответ в JSON формате, используя двойные кавычки для ключей. Пример: {"text": "Вы подобрали камень.", "commands": [{"command": "add_inventory", "command_params": {"name": "камень", "count": 1, "description": "небольшой серый камень", "image_prompt": "a small gray stone"}}]}. Если нет команды, то {"text": "Ничего не произошло.", "commands": []}.`;
+        let scenario = scenarios[selectedScenarioId] || {
+            name: 'Стандартный сценарий',
+            worldDescription: 'Стандартный фэнтезийный мир.',
+            worldHistory: 'Давным-давно...',
+            scenarioDescription: 'Начало вашего приключения.',
+            scenarioHistory: 'Вы просыпаетесь...',
+            scenarioSettings: 'Нет особых настроек.'
+        };
+         if (selectedScenarioId === 'default') {
+            scenario = {
+                name: 'Стандартный сценарий',
+                worldDescription: 'Стандартный фэнтезийный мир.',
+                worldHistory: 'Давным-давно...',
+                scenarioDescription: 'Начало вашего приключения.',
+                scenarioHistory: 'Вы просыпаетесь...',
+                scenarioSettings: 'Нет особых настроек.'
+            };
+        }
+        const prompt = `Ты - рассказчик для текстовой ролевой игры. Мир: ${scenario.worldDescription}. История мира: ${scenario.worldHistory}. Сценарий: ${scenario.scenarioDescription}. История сценария: ${scenario.scenarioHistory}. Настройки сценария: ${scenario.scenarioSettings}. Опиши, что происходит дальше после действия персонажа: ${JSON.stringify(playerInfo)}. Опиши ситуацию в 4-5 предложениях. Используй развернутые предложения и описания. Описывай действия персонажа и неигровых персонажей (NPC), но не выполняй действия за персонажа. Учитывай предыдущие действия персонажа и историю чата. Если персонаж достает откуда-либо или берет с собой какой-либо предмет, добавь этот предмет в инвентарь командой "add_inventory". Если персонаж подбирает предмет, используй команду "add_inventory" и параметры в JSON формате. Обязательно дай предмету подробное описание, чтобы можно было сгенерировать изображение для него. Добавь image_prompt для генерации изображения. Если удаляет, используй команду "remove_inventory" и параметры в JSON формате. Если персонаж находит новую локацию, добавь ее на карту командой "add_location". Обязательно дай локации подробное описание, чтобы можно было сгенерировать изображение для нее. Добавь image_prompt для генерации изображения. **Если персонаж встречает нового персонажа, который называет свое имя (не общее название типа "пацан", "девушка", а имя на подобие "Руслан", "Иракан", "Илиан" и т.д.), добавь его в список знакомых командой "add_character". Обязательно дай персонажу имя, описание внешности, отношение к персонажу игрока и image_prompt для генерации изображения.** **Если персонаж раскрывает свое настоящее имя, то используй команду "edit_character" и параметры в JSON формате, используя старое имя персонажа в параметре "oldName".** Если персонаж инициирует битву, используй команду "start_battle" и сгенерируй врага в JSON формате. Если бой закончился, используй команду "end_battle". **В конце ответа, добавь информацию для ГМ о доступных командах и их параметрах. Например: "Доступные команды: add_inventory {\"name\": \"имя\", \"count\": количество, \"description\": \"описание\", \"image_prompt\": \"image prompt\"}, add_location {\"name\": \"имя\", \"description\": \"описание\", \"image_prompt\": \"image prompt\"}, add_character {\"name\": \"имя\", \"description\": \"описание\", \"relation\": \"отношение\", \"image_prompt\": \"image prompt\"}, edit_character {\"oldName\": \"старое имя\", \"name\": \"новое имя\", \"description\": \"описание\", \"relation\": \"отношение\", \"image_prompt\": \"image prompt\"}. Если требуется добавить персонажа в список персонажей, то используй команду add_character. Если нужно отредактировать информацию о персонаже, то используй команду edit_character."** Возвращай ответ в JSON формате, используя двойные кавычки для ключей. Пример: {"text": "Вы подобрали камень.", "commands": [{"command": "add_inventory", "command_params": {"name": "камень", "count": 1, "description": "небольшой серый камень", "image_prompt": "a small gray stone"}}]}. Если нет команды, то {"text": "Ничего не произошло.", "commands": []}.`;
         const response = await getGeminiResponse(prompt);
         const jsonResponse = parseGeminiResponse(response);
         if (jsonResponse && jsonResponse.text) {
